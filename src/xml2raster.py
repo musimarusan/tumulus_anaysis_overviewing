@@ -1,4 +1,9 @@
+# [Reference]
+# https://www.gis-py.com/entry/2016/01/10/163027
+
 # -*- coding: utf-8 -*-
+import sys
+import os
 import re
 import numpy as np
 #import gdal
@@ -6,16 +11,56 @@ from osgeo import gdal
 from os.path import join,relpath
 from glob import glob
 
-def main():
+
+def float2(str):
+    lc = ""
+    for i in range(len(str)):
+        c = str[i]
+        if c == lc:
+            renzoku += 1
+            if renzoku == 6:
+                return float(str[:i+1] + c * 10)
+        else:
+            lc = c
+            renzoku = 1
+        return float(str)
+    
+
+def isExistDir(dir: str):
+    ret = os.path.isdir(dir)
+
+    return ret
+
+
+def ChkDirExist(indir: str, outdir: str):
+    
+    if isExistDir(indir) != False:
+        ret1 = 0
+    else:
+        print('not exists input directory.',indir)
+        ret1 = 1
+        
+    if isExistDir(outdir) != False:
+        ret2 = 0
+    else:
+        print('not exists output directory.',outdir)
+        ret2 = 2
+        
+    return ret1+ret2
+            
+    
+def proc(indir: str, outdir: str):
+
     #XMLを格納するフォルダ
-    path = "/Volumes/dev02/work/20240810_Kanto-tumulus/data/raster/XML/FG-GML-5440-12-DEM5A"
+#    path = "/Volumes/dev02/work/20240810_Kanto-tumulus/data/raster/XML/FG-GML-5440-12-DEM5A"
     #GeoTiffを出力するフォルダ
-    geopath = "/Volumes/dev02/work/20240810_Kanto-tumulus/data/raster/individual/FG-GML-5440-12-DEM5A"
+#    geopath = "/Volumes/dev02/work/20240810_Kanto-tumulus/data/raster/individual/FG-GML-5440-12-DEM5A"
+
     #ファイル名取得
-    files = [relpath(x,path) for x in glob(join(path,'*'))]
+    files = [relindir(x,indir) for x in glob(join(indir,'*'))]
 
     for fl in files:
-        xmlFile = join(path,fl)
+        xmlFile = join(indir,fl)
         #XMLを開く
         with open(xmlFile, "r", encoding = "utf-8") as f:
             r = re.compile("<gml:lowerCorner>(.+) (.+)</gml:lowerCorner>")
@@ -87,7 +132,7 @@ def main():
 
         #拡張子を変更する（ファイル名はそのまま）
         dst = fl.replace('.xml', '.tif')
-        tiffFile = join(geopath,dst)
+        tiffFile = join(outdir,dst)
         dst_ds = driver.Create(tiffFile, xlen, ylen, 1, gdal.GDT_Float32, create_options)
 
         dst_ds.SetProjection('GEOGCS["JGD2000",DATUM["Japanese_Geodetic_Datum_2000",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6612"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.01745329251994328,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4612"]]')
@@ -121,18 +166,22 @@ def main():
         rband.WriteRaster(0, 0, xlen, ylen, narray.tostring())
         dst_ds.FlushCache()
 
-def float2(str):
-    lc = ""
-    for i in range(len(str)):
-        c = str[i]
-        if c == lc:
-            renzoku += 1
-            if renzoku == 6:
-                return float(str[:i+1] + c * 10)
-        else:
-            lc = c
-            renzoku = 1
-        return float(str)
 
+def main(indir: str, outdir: str):
+
+
+    if ChkDirExist(indir, outdir) != 0:
+        print('processing terminated.')
+        exit()
+
+    print('processing continues.')
+        
+                
 if __name__ == "__main__":
-    main()
+    input_dir  = sys.argv[1]
+    output_dir = sys.argv[2]
+
+    print(f'Input directory  = {input_dir}')
+    print(f'Output directory = {output_dir}')
+
+    main(input_dir, output_dir)
