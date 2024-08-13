@@ -47,8 +47,8 @@ def ChkDirExist(indir: str, outdir: str):
         ret2 = 2
         
     return ret1+ret2
-            
-    
+
+  
 def proc(indir: str, outdir: str):
 
     #XMLを格納するフォルダ
@@ -57,7 +57,7 @@ def proc(indir: str, outdir: str):
 #    geopath = "/Volumes/dev02/work/20240810_Kanto-tumulus/data/raster/individual/FG-GML-5440-12-DEM5A"
 
     #ファイル名取得
-    files = [relindir(x,indir) for x in glob(join(indir,'*'))]
+    files = [relpath(x,indir) for x in glob(join(indir,'*'))]
 
     for fl in files:
         xmlFile = join(indir,fl)
@@ -169,13 +169,24 @@ def proc(indir: str, outdir: str):
 
 def main(indir: str, outdir: str):
 
-
+    #
     if ChkDirExist(indir, outdir) != 0:
         print('processing terminated.')
         exit()
+    #
+    list_targ_dir  = [ f for f in os.listdir(indir) if os.path.isdir(os.path.join(indir, f)) ]
 
-    print('processing continues.')
-        
+    #
+    for targ_dir in list_targ_dir:
+        individual_xml_path    = f'{indir}/{targ_dir}'
+        individual_raster_path = f'{outdir}/{targ_dir}'
+
+        if isExistDir(individual_raster_path) != True:
+            print('newly need to create directory', individual_raster_path)
+            os.makedirs(individual_raster_path)
+
+        proc(individual_xml_path, individual_raster_path)
+            
                 
 if __name__ == "__main__":
     input_dir  = sys.argv[1]
