@@ -8,7 +8,7 @@ import shapely
 from shapely.plotting import plot_line
 from shapely.plotting import plot_points
 from shapely.plotting import plot_polygon
-
+from shapely.geometry import Point
 
 def create_combined_dataframe(infile: str, reffile: str):
 
@@ -51,13 +51,21 @@ def create_polygons(gdf):
         length = gdf['墳丘形状情報テーブル::墳長（m）'][ii]
         vertex_list = list(gdf['geometry'][ii].exterior.coords)
     
-        # print(fid)
-        buf = int(length / 10) * 3
-        # print(buf)
-        poly = shapely.Polygon(vertex_list).buffer(buf)
+#        buf = int(length / 10) * 3
+#        poly = shapely.Polygon(vertex_list).buffer(buf)
+#        rect = poly.minimum_rotated_rectangle
 
-        rect = poly.minimum_rotated_rectangle
+#        buf = int(length / 2)
+#        poly = shapely.Polygon(vertex_list).buffer(buf)
+#        bounds = poly.bounds
+#        rect = shapely.box(*poly.bounds)
 
+        buf = int(length/10)*8
+        poly = shapely.Polygon(vertex_list)
+        center = poly.centroid
+        circle = center.buffer(buf)
+        rect = circle.envelope
+        
         shapely_polygons.append(rect)
         id_list.append(id)
         dir_list.append(dir)
