@@ -71,12 +71,13 @@ def move_point(gdf, xoffset: int, yoffset: int):
 
 
 
-def create_polygon(gdf, scale: float):
+def create_polygon(gdf, length: int, scale: float):
 
     gdf.set_index('IDテーブル::ID',inplace=True)
 
-    buf = max(gdf['墳丘形状情報テーブル::墳長（m）']) * scale
-    
+#    buf = max(gdf['墳丘形状情報テーブル::墳長（m）']) * scale
+    buf = length * scale
+
     gdf = gdf.buffer(buf).envelope
         
     return gdf
@@ -88,7 +89,7 @@ def write_geojson(gdf, outfile):
     gdf.to_file(outfile, driver='GeoJSON', )
     
 
-def main(infile: str, outpath: str, length: int, scale: int):
+def main(infile: str, flag: str, outpath: str, length: int, scale: int):
 
 #    dummy, mxlen = read_geojson(infile)
     offset_list = calculate_offset(length)
@@ -105,14 +106,14 @@ def main(infile: str, outpath: str, length: int, scale: int):
 #        print(xoff,yoff)
 
         gdf1 = move_point(gdf,xoff,yoff)
-        gdf2 = create_polygon(gdf1, scale)
+        gdf2 = create_polygon(gdf1, length, scale)
 
         p_file = Path(infile)
         targ_stem   = p_file.stem
 #        parent_path = p_file.parent
 #        print(parent_path, targ_stem)
 
-        outfile = f'{outpath}/{targ_stem}_TRUE_{xoff}{yoff}.geojson'
+        outfile = f'{outpath}/{targ_stem}_{flag}_{xoff}{yoff}.geojson'
         
         write_geojson(gdf2, outfile)
    
@@ -121,13 +122,15 @@ def main(infile: str, outpath: str, length: int, scale: int):
 
 if __name__ == "__main__":
     inp_gjson = sys.argv[1]
-    out_path  = sys.argv[2]
-    length    = int( sys.argv[3] )
-    scale     = float( sys.argv[4] )
+    flag      = sys.argv[2]
+    out_path  = sys.argv[3]
+    length    = int( sys.argv[4] )
+    scale     = float( sys.argv[5] )
 
     print(f'input geoJson = {inp_gjson}')
+    print(f'flag          = {flag}')
     print(f'output path   = {out_path}')
     print(f'length        = {length}')    
     print(f'scaale        = {scale}')    
 
-    main(inp_gjson, out_path, length, scale)
+    main(inp_gjson, flag, out_path, length, scale)

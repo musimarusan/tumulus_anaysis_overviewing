@@ -24,7 +24,7 @@ def main(indir: str, outdir: str):
         print(resampled_file)
 
         
-        cmd = f'gdal_translate -outsize 59 48 {targ_file} {resampled_file}'
+        cmd = f'gdal_translate -outsize 50 50 {targ_file} {resampled_file}'
         subprocess.run(cmd, shell=True)
 
 

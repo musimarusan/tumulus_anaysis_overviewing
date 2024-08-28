@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 import folium
 import pyproj
@@ -41,7 +42,16 @@ def create_masked_raster(input_image: str, poly, output_image: str ):
     with rasterio.open(output_image, "w", **out_meta) as dest:
         dest.write(masked)
 
+def create_output_file_name(infile: str, poly, outdir: str):
 
+    stem = Path(infile).stem
+    p    = stem.split('_')
+       
+    output_raster_file = f'{outdir}/masked_{int(poly['IDテーブル::ID'])}_{p[2]}_{p[3]}.tif'
+
+    return output_raster_file
+
+        
 def main(inpoly: str, inimg: str, outdir: str):
 
     polygons = gpd.read_file(inpoly)
@@ -49,8 +59,8 @@ def main(inpoly: str, inimg: str, outdir: str):
     for ii in range(len(polygons)):
         poly = polygons[ii:ii+1]
 
-        output_raster_file = f'{outdir}/masked_{int(poly['IDテーブル::ID'])}.tif'
-#        print(output_raster_file)
+        output_raster_file = create_output_file_name(inpoly, poly, outdir)
+        
         create_masked_raster(inimg, poly, output_raster_file )
 
         
