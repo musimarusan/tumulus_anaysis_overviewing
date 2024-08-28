@@ -49,7 +49,7 @@ def main(inpoly: str, inimg: str, outdir: str):
     for ii in range(len(polygons)):
         poly = polygons[ii:ii+1]
 
-        output_raster_file = f'{outdir}/masked_{int(poly['id'])}.tif'
+        output_raster_file = f'{outdir}/masked_{int(poly['IDテーブル::ID'])}.tif'
 #        print(output_raster_file)
         create_masked_raster(inimg, poly, output_raster_file )
 

@@ -1,108 +1,133 @@
 import sys
+from pathlib import Path
+import numpy as np
 import pandas as pd
 import geopandas as gpd
 
 from matplotlib import pyplot as plt
-import numpy as np
+
 import shapely
 from shapely.plotting import plot_line
 from shapely.plotting import plot_points
 from shapely.plotting import plot_polygon
+from shapely import affinity
 from shapely.geometry import Point
 
-def create_combined_dataframe(infile: str, reffile: str):
 
-    gdf_inp = gpd.read_file(infile)
-    gdf_ref = gpd.read_file(reffile)
-
-    df_inp = pd.DataFrame(gdf_inp)
-    df_inp = df_inp.set_index('ID')
-
-    gdf_ext = gdf_ref[['IDテーブル::ID','墳丘情報テーブル::方位（度）', '墳丘形状情報テーブル::墳長（m）']]
-    gdf_ext = gdf_ext.rename(columns={'IDテーブル::ID': 'ID'})
-    df_ext  = pd.DataFrame(gdf_ext)
-    df_ext  = df_ext.set_index('ID')
-
-
-    df_cnb = pd.concat([df_inp, df_ext], join='inner', axis=1)
-    df_cnb = df_cnb.reset_index()
-
-    gdf_cnb = gpd.GeoDataFrame(df_cnb, geometry='geometry', crs='EPSG:6677')
-#    print(gdf_cnb)
-
-    return gdf_cnb
-
-def create_polygons(gdf):
-
-    gdf_out = gpd.GeoDataFrame()
-
-    shapely_polygons = []
-    id_list         = []
-    dir_list         = []
-    length_list      = []
-
-    # print('length = ',len(gdf_c['geometry']))
-
-    for ii in range(len(gdf['geometry'])):
-        # print(ii)
-
-        id    = gdf['ID'][ii]
-        dir    = gdf['墳丘情報テーブル::方位（度）'][ii]
-        length = gdf['墳丘形状情報テーブル::墳長（m）'][ii]
-        vertex_list = list(gdf['geometry'][ii].exterior.coords)
+def read_geojson(infile: str):
+    targ_epsg = 6677
     
-#        buf = int(length / 10) * 3
-#        poly = shapely.Polygon(vertex_list).buffer(buf)
-#        rect = poly.minimum_rotated_rectangle
+    gdf = gpd.read_file(infile,)
+    gdf = gdf.to_crs(epsg = targ_epsg)
 
-#        buf = int(length / 2)
-#        poly = shapely.Polygon(vertex_list).buffer(buf)
-#        bounds = poly.bounds
-#        rect = shapely.box(*poly.bounds)
+#    max_tumulus_length = int( max(gdf['墳丘形状情報テーブル::墳長（m）']) )
+    
+    return gdf
 
-        buf = int(length/10)*8
-        poly = shapely.Polygon(vertex_list)
-        center = poly.centroid
-        circle = center.buffer(buf)
-        rect = circle.envelope
+    
+
+def calculate_offset(maxlen: int):
+    deno = 3
+    
+    xoff1 = int(-maxlen / deno)
+    yoff1 = int(maxlen / deno)
+
+    xoff2 = 0
+    yoff2 = int(maxlen / deno)
+
+    xoff3 = int(maxlen / deno)
+    yoff3 = int(maxlen / deno)
+
+    xoff4 = int(-maxlen / deno)
+    yoff4 = 0
         
-        shapely_polygons.append(rect)
-        id_list.append(id)
-        dir_list.append(dir)
-        length_list.append(length)
+    xoff5 = 0
+    yoff5 = 0
 
-    return shapely_polygons, id_list, dir_list, length_list
+    xoff6 = int(maxlen / deno)
+    yoff6 = 0
 
-def create_output_polygons(shapely_polygons, id_list, dir_list, length_list, outfile):
+    xoff7 = int(-maxlen / deno)
+    yoff7 = int(-maxlen / deno)
 
-    data = {'id':id_list, 'dir':dir_list, 'length':length_list}
+    xoff8 = 0
+    yoff8 = int(-maxlen / deno)
 
-    gdf_out = gpd.GeoDataFrame(data, geometry=shapely_polygons, crs='EPSG:6677')
+    xoff9 = int(maxlen / deno)
+    yoff9 = int(-maxlen / deno)
 
-    gdf_out.to_file(outfile, driver='GeoJSON', )
+    offset_list = [ [xoff1, yoff1], [xoff2, yoff2], [xoff3, yoff3],
+                    [xoff4, yoff4], [xoff5, yoff5], [xoff6, yoff6],
+                    [xoff7, yoff7], [xoff8, yoff8], [xoff9, yoff9]]
+                    
+    return offset_list
+
+
+def move_point(gdf, xoffset: int, yoffset: int):
+
+    gdf['geometry'] = gdf['geometry'].apply(affinity.translate, xoff=xoffset, yoff=yoffset)
+                         
+    return gdf
 
 
 
-def main(infile, reffile, outfile):
-    gdf_combined = create_combined_dataframe(infile, reffile)
-#    print(gdf_combined)
-    shapely_polygons, id_list, dir_list, length_list = create_polygons(gdf_combined)
-#    print(shapely_polygons)
-#    print(id_list)
-#    print(dir_list)
-#    print(length_list)
-    create_output_polygons(shapely_polygons, id_list, dir_list, length_list, outfile)
+def create_polygon(gdf, scale: float):
+
+    gdf.set_index('IDテーブル::ID',inplace=True)
+
+    buf = max(gdf['墳丘形状情報テーブル::墳長（m）']) * scale
+    
+    gdf = gdf.buffer(buf).envelope
+        
+    return gdf
+
+
+def write_geojson(gdf, outfile):
+    targ_epsg = 4326
+
+    gdf.to_file(outfile, driver='GeoJSON', )
+    
+
+def main(infile: str, outpath: str, length: int, scale: int):
+
+#    dummy, mxlen = read_geojson(infile)
+    offset_list = calculate_offset(length)
+
+    for offset in offset_list:
+
+        gdf1 = gpd.GeoDataFrame()
+        gdf2 = gpd.GeoDataFrame()
+
+        gdf = read_geojson(infile)
+                
+        xoff = int(offset[0])
+        yoff = int(offset[1])
+#        print(xoff,yoff)
+
+        gdf1 = move_point(gdf,xoff,yoff)
+        gdf2 = create_polygon(gdf1, scale)
+
+        p_file = Path(infile)
+        targ_stem   = p_file.stem
+#        parent_path = p_file.parent
+#        print(parent_path, targ_stem)
+
+        outfile = f'{outpath}/{targ_stem}_TRUE_{xoff}{yoff}.geojson'
+        
+        write_geojson(gdf2, outfile)
    
     return
 
 
 if __name__ == "__main__":
     inp_gjson = sys.argv[1]
-    ref_gjson = sys.argv[2]
-    out_gjson = sys.argv[3]
+    out_path  = sys.argv[2]
+    length    = int( sys.argv[3] )
+    scale     = float( sys.argv[4] )
 
-    print(f'input geoJson     = {inp_gjson}')
-    print(f'reference geojson = {ref_gjson}')
-    print(f'output geojson    = {out_gjson}')
+    print(f'input geoJson = {inp_gjson}')
+    print(f'output path   = {out_path}')
+    print(f'length        = {length}')    
+    print(f'scaale        = {scale}')    
 
-    main(inp_gjson, ref_gjson, out_gjson)
+    main(inp_gjson, out_path, length, scale)
