@@ -1,9 +1,17 @@
+import sys
 import os
 import pandas as pd
 
 
 def main(path: str):
 
+    Train_True  = f'{path}/Train/TRUE'
+    Train_False = f'{path}/Train/FALSE'
+    Test_True   = f'{path}/Test/TRUE'
+    Test_False  = f'{path}/Test/FALSE'
+
+        
+    
     # Train
     train_true  = os.listdir(Train_True)
     df_tr_true = pd.DataFrame(train_true, columns=['file_name'])
